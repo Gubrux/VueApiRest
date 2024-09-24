@@ -1,6 +1,12 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
-    <q-btn label="Crear Persona" color="primary" @click="dialog = true" />
+    <q-btn
+      label="Crear Persona"
+      color="cyan-4"
+      text-color="blue-grey-9"
+      class="q-mb-md outline"
+      @click="dialog = true"
+    />
 
     <q-dialog
       v-model="dialog"

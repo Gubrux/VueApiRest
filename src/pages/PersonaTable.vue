@@ -1,36 +1,50 @@
 <template>
   <div class="q-pa-md">
-    <CrearPersonaModal @crear-persona="fetchPersonas" />
+    <div class="row q-gutter-md items-center">
+      <div class="col">
+        <CrearPersonaModal @crear-persona="fetchPersonas" />
+      </div>
+      <div class="col">
+        <InputBuscar @buscar="filtrarFullname"  />
+      </div>
+      <div class="col">
+        <InputBuscar @buscar="filtrarPorDocumento" />
+      </div>
+      <div class="col-auto">
+        <q-btn
+          color="primary"
+          icon="edit"
+          :disable="selected.length === 0"
+          @click="editPersona(selected[0])"
+          class="q-mr-sm q-btn--outline q-mr-md"
+        />
+        <q-btn
+          color="negative"
+          icon="delete"
+          :disable="selected.length === 0"
+          @click="removePersona(selected[0].id)"
+          class="q-btn--outline"
+        />
+      </div>
+    </div>
     <q-table
       title="Personas"
-      :rows="personas"
+      :rows="personasFiltradas"
       :columns="columns"
-      row-key="nombre"
-    >
-      <template v-slot:body-cell-actions="props">
-        <q-td :props="props">
-          <q-btn color="primary" icon="edit" @click="editPersona(props.row)" />
-          <q-btn
-            color="negative"
-            icon="delete"
-            @click="removePersona(props.row.id)"
-          />
-        </q-td>
-      </template>
-    </q-table>
-
+      row-key="id"
+      selection="single"
+      v-model:selected="selected"
+    />
     <q-dialog v-model="dialogOpen">
       <q-card>
         <q-card-section>
           <div class="text-h6">Editar Persona</div>
         </q-card-section>
-
         <q-card-section>
           <q-input v-model="editForm.nombre" label="Nombre" />
           <q-input v-model="editForm.apellido" label="Apellido" />
           <q-input v-model="editForm.documento" label="Documento" />
         </q-card-section>
-
         <q-card-actions align="right">
           <q-btn flat label="Cancelar" v-close-popup />
           <q-btn flat label="Guardar" @click="updatePersona" />
@@ -45,6 +59,7 @@ import axios from 'axios';
 import { apiUrl } from 'src/api/apiUrl';
 import { onMounted, ref } from 'vue';
 import CrearPersonaModal from './CrearPersonaModal.vue';
+import InputBuscar from './InputBuscar.vue';
 
 const columns = [
   {
@@ -66,11 +81,6 @@ const columns = [
     field: 'documento',
     sortable: true,
   },
-  {
-    name: 'actions',
-    label: 'Acciones',
-    field: 'actions',
-  },
 ];
 
 interface Persona {
@@ -80,7 +90,8 @@ interface Persona {
   documento: string;
 }
 
-const personas = ref<Persona[]>([]);
+const todasPersonas = ref<Persona[]>([]);
+const personasFiltradas = ref<Persona[]>([]);
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 const dialogOpen = ref(false);
@@ -91,12 +102,31 @@ const editForm = ref<Persona>({
   documento: '',
 });
 
+const selected = ref<Persona[]>([]);
+
+const filtrosInputs: { fullname?: string; documento?: string } = {};
+
+const filtrarFullname = (fullname: string) => {
+  console.log('buscando por nombre completo', fullname);
+  filtrosInputs.fullname = fullname;
+  fetchPersonas();
+};
+
+const filtrarPorDocumento = (documento: string) => {
+  console.log('buscando por documento:', documento);
+  filtrosInputs.documento = documento;
+  fetchPersonas();
+};
+
 const fetchPersonas = async () => {
   loading.value = true;
   errorMessage.value = null;
   try {
-    const response = await axios.get<Persona[]>(apiUrl);
-    personas.value = response.data;
+    const response = await axios.get<Persona[]>(apiUrl, {
+      params: filtrosInputs,
+    });
+    todasPersonas.value = response.data;
+    personasFiltradas.value = response.data;
   } catch (error) {
     errorMessage.value = 'Error al obtener las personas';
   } finally {
